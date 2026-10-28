@@ -1,0 +1,61 @@
+
+name: Build MapLink PR 131
+
+on:
+  workflow_dispatch:
+    inputs:
+      minecraft:
+        description: "Minecraft version (e.g. 1.21.1 or 26.3.0)"
+        required: true
+        default: "1.21.1"
+        type: string
+      loader:
+        description: "Mod loader"
+        required: true
+        default: "fabric"
+        type: choice
+        options:
+          - fabric
+          - neoforge
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      MC_VERSION: ${{ inputs.minecraft }}
+      LOADER: ${{ inputs.loader }}
+
+    steps:
+      - name: Download PR 131 source
+        uses: actions/checkout@v7
+        with:
+          repository: mfishma/MapLink
+          ref: 9673a31a40d902b3ea5ee9e6e720b9061e8e3417
+          persist-credentials: false
+
+      - name: Install Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+            25
+
+      - name: Build MapLink
+        run: |
+          test -f "versionProperties/${MC_VERSION}.properties"
+          chmod +x ./gradlew
+          ./gradlew --no-daemon "-PmcVer=${MC_VERSION}" ":${LOADER}:build"
+
+      - name: Upload JAR files
+        uses: actions/upload-artifact@v7
+        with:
+          name: maplink-pr131-${{ inputs.minecraft }}-${{ inputs.loader }}
+          path: ${{ inputs.loader }}/build/libs/*.jar
+          if-no-files-found: error
